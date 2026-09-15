@@ -1,4 +1,4 @@
-name: Build Bretje P B.V. v6.1 GODOT THIRD PERSON
+name: Build Bretje P B.V. v6.2 GODOT THIRD PERSON
 
 on:
   workflow_dispatch:
@@ -45,29 +45,55 @@ jobs:
           unzip -q Godot_v4.4.1-stable_export_templates.tpz -d /tmp/godot_templates
           cp -r /tmp/godot_templates/templates/* "$HOME/.local/share/godot/export_templates/4.4.1.stable/"
 
-      - name: Configure Godot Android environment
+      - name: Install Godot 4.4 Android SDK requirements
         shell: bash
         run: |
           set -e
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "JAVA_HOME=$JAVA_HOME"
-          test -d "$ANDROID_HOME"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_HOME" \
+            "platform-tools" \
+            "build-tools;34.0.0" \
+            "platforms;android-34" \
+            "cmdline-tools;latest" \
+            "cmake;3.10.2.4988404" \
+            "ndk;23.2.8568313"
           test -x "$ANDROID_HOME/platform-tools/adb"
-          mkdir -p "$HOME/.config/godot"
-          cat > "$HOME/.config/godot/editor_settings-4.4.tres" <<EOF
-          [gd_resource type="EditorSettings" format=3]
+          test -d "$ANDROID_HOME/build-tools/34.0.0"
+          test -d "$ANDROID_HOME/platforms/android-34"
 
-          [resource]
-          export/android/android_sdk_path = "$ANDROID_HOME"
-          export/android/java_sdk_path = "$JAVA_HOME"
-          export/android/debug_keystore = "$HOME/.android/debug.keystore"
-          EOF
+      - name: Configure Godot Android paths and debug signing
+        shell: bash
+        run: |
+          set -e
           mkdir -p "$HOME/.android"
           if [ ! -f "$HOME/.android/debug.keystore" ]; then
-            keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+            keytool -genkeypair -v \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android -alias androiddebugkey -keypass android \
+              -dname "CN=Android Debug,O=Android,C=US" \
+              -keyalg RSA -keysize 2048 -validity 10000
           fi
-          "$ANDROID_HOME/platform-tools/adb" version || true
-          java -version
+
+          cat > /tmp/set_android.gd <<'GDS'
+          extends SceneTree
+          func _initialize():
+              var es = EditorInterface.get_editor_settings()
+              es.set_setting("export/android/android_sdk_path", OS.get_environment("ANDROID_HOME"))
+              es.set_setting("export/android/java_sdk_path", OS.get_environment("JAVA_HOME"))
+              es.set_setting("export/android/debug_keystore", OS.get_environment("HOME") + "/.android/debug.keystore")
+              es.save()
+              print("ANDROID SDK SET: ", es.get_setting("export/android/android_sdk_path"))
+              print("JAVA SDK SET: ", es.get_setting("export/android/java_sdk_path"))
+              quit()
+          GDS
+          ./godot --headless --editor --script /tmp/set_android.gd
+
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$GODOT_ANDROID_KEYSTORE_DEBUG_PATH" >> "$GITHUB_ENV"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=$GODOT_ANDROID_KEYSTORE_DEBUG_USER" >> "$GITHUB_ENV"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=$GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD" >> "$GITHUB_ENV"
 
       - name: Import and validate project
         shell: bash
