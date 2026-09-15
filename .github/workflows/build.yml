@@ -1,4 +1,4 @@
-name: Build Bretje P B.V. v6.2 GODOT THIRD PERSON
+name: Build Bretje P B.V. v6.3 GODOT THIRD PERSON
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -81,12 +81,11 @@ jobs:
               es.set_setting("export/android/android_sdk_path", OS.get_environment("ANDROID_HOME"))
               es.set_setting("export/android/java_sdk_path", OS.get_environment("JAVA_HOME"))
               es.set_setting("export/android/debug_keystore", OS.get_environment("HOME") + "/.android/debug.keystore")
-              es.save()
               print("ANDROID SDK SET: ", es.get_setting("export/android/android_sdk_path"))
               print("JAVA SDK SET: ", es.get_setting("export/android/java_sdk_path"))
               quit()
           GDS
-          ./godot --headless --editor --script /tmp/set_android.gd
+          timeout 60s ./godot --headless --editor --script /tmp/set_android.gd
 
           export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore"
           export GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey"
@@ -100,8 +99,7 @@ jobs:
         run: |
           set -e
           cd game
-          ../godot --headless --editor --path . --quit-after 5
-          ../godot --headless --path . --editor --quit
+          timeout 120s ../godot --headless --editor --path . --quit-after 10
 
       - name: Export Android APK
         shell: bash
@@ -110,13 +108,13 @@ jobs:
         run: |
           set -e
           cd game
-          ../godot --headless --verbose --path . --export-debug Android Bretje-P-BV-Dakwerk-Simulator-v6.apk
-          test -f Bretje-P-BV-Dakwerk-Simulator-v6.apk
-          ls -lh Bretje-P-BV-Dakwerk-Simulator-v6.apk
+          timeout 900s ../godot --headless --verbose --path . --export-debug Android Bretje-P-BV-Dakwerk-Simulator-v6.3.apk
+          test -f Bretje-P-BV-Dakwerk-Simulator-v6.3.apk
+          ls -lh Bretje-P-BV-Dakwerk-Simulator-v6.3.apk
 
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: Bretje-P-BV-v6-APK
-          path: game/Bretje-P-BV-Dakwerk-Simulator-v6.apk
+          name: Bretje-P-BV-v6.3-APK
+          path: game/Bretje-P-BV-Dakwerk-Simulator-v6.3.apk
           if-no-files-found: error
