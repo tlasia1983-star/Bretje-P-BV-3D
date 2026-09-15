@@ -1,4 +1,4 @@
-name: Build Bretje P B.V. v6.6 GODOT THIRD PERSON - ANDROID HOME FIXED
+name: Build Bretje P B.V. v6.7 GODOT THIRD PERSON - GODOT 4.4 CI FIXED
 
 on:
   workflow_dispatch:
@@ -61,41 +61,68 @@ jobs:
           test -d "$ANDROID_HOME/build-tools/34.0.0"
           test -d "$ANDROID_HOME/platforms/android-34"
 
-      - name: Configure Godot Android paths and debug signing
+      - name: Configure Godot 4.4 Android CI settings
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
+
+          # Resolve Android SDK path once and persist it for every later Actions step.
+          if [ -z "${ANDROID_HOME:-}" ]; then
+            if [ -n "${ANDROID_SDK_ROOT:-}" ]; then
+              ANDROID_HOME="$ANDROID_SDK_ROOT"
+            elif [ -d "/usr/local/lib/android/sdk" ]; then
+              ANDROID_HOME="/usr/local/lib/android/sdk"
+            else
+              echo "ERROR: Android SDK not found"
+              exit 1
+            fi
+          fi
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+
           mkdir -p "$HOME/.android"
           if [ ! -f "$HOME/.android/debug.keystore" ]; then
             keytool -genkeypair -v \
               -keystore "$HOME/.android/debug.keystore" \
-              -storepass android -alias androiddebugkey -keypass android \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
               -dname "CN=Android Debug,O=Android,C=US" \
               -keyalg RSA -keysize 2048 -validity 10000
           fi
 
-          cat > /tmp/set_android.gd <<'GDS'
-          extends SceneTree
-          func _initialize():
-              var es = EditorInterface.get_editor_settings()
-              es.set_setting("export/android/android_sdk_path", OS.get_environment("ANDROID_HOME"))
-              es.set_setting("export/android/java_sdk_path", OS.get_environment("JAVA_HOME"))
-              es.set_setting("export/android/debug_keystore", OS.get_environment("HOME") + "/.android/debug.keystore")
-              es.set_setting("export/android/debug_keystore_user", "androiddebugkey")
-              es.set_setting("export/android/debug_keystore_pass", "android")
-              print("ANDROID SDK SET: ", es.get_setting("export/android/android_sdk_path"))
-              print("JAVA SDK SET: ", es.get_setting("export/android/java_sdk_path"))
-              print("ANDROID EDITOR SETTINGS CONFIGURED")
-              quit()
-          GDS
-          timeout 60s ./godot --headless --editor --script /tmp/set_android.gd
+          # Godot 4.3+ stores editor settings per minor version.
+          # Write the 4.4 file directly instead of relying on an EditorSettings script.
+          mkdir -p "$HOME/.config/godot"
+          cat > "$HOME/.config/godot/editor_settings-4.4.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
 
-          export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore"
-          export GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey"
-          export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android"
-          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$GODOT_ANDROID_KEYSTORE_DEBUG_PATH" >> "$GITHUB_ENV"
-          echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=$GODOT_ANDROID_KEYSTORE_DEBUG_USER" >> "$GITHUB_ENV"
-          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=$GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD" >> "$GITHUB_ENV"
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_HOME"
+          export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/debug_keystore = "$HOME/.android/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          export/android/force_system_user = false
+          export/android/shutdown_adb_on_exit = true
+          EOF
+
+          echo "=== Godot 4.4 editor settings ==="
+          cat "$HOME/.config/godot/editor_settings-4.4.tres"
+
+          test -x "$ANDROID_HOME/platform-tools/adb"
+          test -d "$JAVA_HOME"
+          keytool -list \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey >/dev/null
+
+          # Set all three debug signing overrides together.
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$HOME/.android/debug.keystore" >> "$GITHUB_ENV"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey" >> "$GITHUB_ENV"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android" >> "$GITHUB_ENV"
+
+          echo "Godot 4.4 Android CI configuration OK"
 
       - name: Import and validate project
         shell: bash
@@ -147,12 +174,15 @@ jobs:
           test -f "$HOME/.local/share/godot/export_templates/4.4.1.stable/android_release.apk"
           ls -lh "$HOME/.local/share/godot/export_templates/4.4.1.stable/android_"*.apk
 
+          echo "=== Godot editor settings actually used ==="
+          cat "$HOME/.config/godot/editor_settings-4.4.tres"
+
           echo "=== Android preset ==="
           cat export_presets.cfg
 
           echo "=== Export Android debug APK ==="
           set +e
-          timeout 900s ../godot --headless --verbose --path . --export-debug "Android" "Bretje-P-BV-Dakwerk-Simulator-v6.6.apk" 2>&1 | tee ../godot-export.log
+          timeout 900s ../godot --headless --verbose --path . --export-debug "Android" "Bretje-P-BV-Dakwerk-Simulator-v6.7.apk" 2>&1 | tee ../godot-export.log
           GODOT_EXIT=${PIPESTATUS[0]}
           set -e
 
@@ -162,13 +192,13 @@ jobs:
             exit "$GODOT_EXIT"
           fi
 
-          test -s Bretje-P-BV-Dakwerk-Simulator-v6.6.apk
+          test -s Bretje-P-BV-Dakwerk-Simulator-v6.7.apk
           echo "=== APK CREATED SUCCESSFULLY ==="
-          ls -lh Bretje-P-BV-Dakwerk-Simulator-v6.6.apk
+          ls -lh Bretje-P-BV-Dakwerk-Simulator-v6.7.apk
 
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: Bretje-P-BV-v6.6-APK
-          path: game/Bretje-P-BV-Dakwerk-Simulator-v6.6.apk
+          name: Bretje-P-BV-v6.7-APK
+          path: game/Bretje-P-BV-Dakwerk-Simulator-v6.7.apk
           if-no-files-found: error
