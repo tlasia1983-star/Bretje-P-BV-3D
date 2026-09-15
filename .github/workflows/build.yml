@@ -1,4 +1,4 @@
-name: Build Bretje P B.V. v6.4 GODOT THIRD PERSON - ANDROID EXPORT FIXED
+name: Build Bretje P B.V. v6.5 GODOT THIRD PERSON - ANDROID EXPORT FIXED
 
 on:
   workflow_dispatch:
@@ -83,9 +83,9 @@ jobs:
               es.set_setting("export/android/debug_keystore", OS.get_environment("HOME") + "/.android/debug.keystore")
               es.set_setting("export/android/debug_keystore_user", "androiddebugkey")
               es.set_setting("export/android/debug_keystore_pass", "android")
-              es.save()
               print("ANDROID SDK SET: ", es.get_setting("export/android/android_sdk_path"))
               print("JAVA SDK SET: ", es.get_setting("export/android/java_sdk_path"))
+              print("ANDROID EDITOR SETTINGS CONFIGURED")
               quit()
           GDS
           timeout 60s ./godot --headless --editor --script /tmp/set_android.gd
@@ -140,7 +140,7 @@ jobs:
 
           echo "=== Export Android debug APK ==="
           set +e
-          timeout 900s ../godot --headless --verbose --path . --export-debug "Android" "Bretje-P-BV-Dakwerk-Simulator-v6.4.apk" 2>&1 | tee ../godot-export.log
+          timeout 900s ../godot --headless --verbose --path . --export-debug "Android" "Bretje-P-BV-Dakwerk-Simulator-v6.5.apk" 2>&1 | tee ../godot-export.log
           GODOT_EXIT=${PIPESTATUS[0]}
           set -e
 
@@ -150,13 +150,13 @@ jobs:
             exit "$GODOT_EXIT"
           fi
 
-          test -s Bretje-P-BV-Dakwerk-Simulator-v6.4.apk
+          test -s Bretje-P-BV-Dakwerk-Simulator-v6.5.apk
           echo "=== APK CREATED SUCCESSFULLY ==="
-          ls -lh Bretje-P-BV-Dakwerk-Simulator-v6.4.apk
+          ls -lh Bretje-P-BV-Dakwerk-Simulator-v6.5.apk
 
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: Bretje-P-BV-v6.4-APK
-          path: game/Bretje-P-BV-Dakwerk-Simulator-v6.4.apk
+          name: Bretje-P-BV-v6.5-APK
+          path: game/Bretje-P-BV-Dakwerk-Simulator-v6.5.apk
           if-no-files-found: error
