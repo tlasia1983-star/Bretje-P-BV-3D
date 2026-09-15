@@ -1,4 +1,4 @@
-name: Build Bretje P B.V. v7.0 V7 FULL GAMEPLAY
+name: Build Bretje P B.V. v7.1 V7.1 FULL GAMEPLAY CI FIXED
 
 
 
@@ -36,7 +36,7 @@ jobs:
 
 
 
-      - name: Create Bretje P B.V. v6 project
+      - name: Create Bretje P B.V. v7.1 project
 
         shell: bash
 
@@ -68,16 +68,16 @@ jobs:
 
           echo 'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIj4KPHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjMTExNTFjIi8+CjxwYXRoIGQ9Ik00NzUgMzAwIEw2NDAgMTcwIEw4MDUgMzAwIEw3NzAgMzM3IEw2NDAgMjM0IEw1MTAgMzM3IFoiIGZpbGw9IiNlODZiMGIiLz4KPHRleHQgeD0iNjQwIiB5PSI0MzUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXdlaWdodD0iYm9sZCIgZm9udC1zaXplPSIxMDQiIGZpbGw9IiNmZmZmZmYiPkxBU0lBIEdBTUU8L3RleHQ+CjxyZWN0IHg9IjUwMCIgeT0iNDc1IiB3aWR0aD0iMjgwIiBoZWlnaHQ9IjgiIHJ4PSI0IiBmaWxsPSIjZTg2YjBiIi8+Cjwvc3ZnPg==' | base64 -d > game/lasia_game_splash.svg
 
-          if [ -f bretje_icon.png ]; then
-
-            cp bretje_icon.png game/bretje_icon.png
-
-          fi
-
           # Optional future high-detail Bretje GLB asset can live in repo root.
 
           if [ -f bretje_character.glb ]; then cp bretje_character.glb game/bretje_character.glb; fi
 
-          echo 'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iOTIiIGZpbGw9IiMxNzE5MWQiLz4KPHBhdGggZD0iTTc0IDI0NSBMMjU2IDk0IEw0MzggMjQ1IEw0MDQgMjg1IEwyNTYgMTYzIEwxMDggMjg1IFoiIGZpbGw9IiNlODZiMGIiLz4KPHJlY3QgeD0iMTA1IiB5PSIyNTUiIHdpZHRoPSIzMDIiIGhlaWdodD0iMTUwIiByeD0iMjgiIGZpbGw9IiMyNzJhMmYiLz4KPHRleHQgeD0iMjU2IiB5PSIzNTUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXdlaWdodD0iOTAwIiBmb250LXNpemU9IjExNiIgZmlsbD0id2hpdGUiPkJQPC90ZXh0Pgo8cmVjdCB4PSIxMTgiIHk9IjM5NyIgd2lkdGg9IjI3NiIgaGVpZ2h0PSIxOCIgcng9IjkiIGZpbGw9IiNlODZiMGIiLz4KPC9zdmc+' | base64 -d > game/bretje_icon.svg
 
-          if [ -f game/bretje_icon.png ]; then
+
+      - name: Install Godot 4.4.1 and Android export templates
+
+        shell: bash
+
+        run: |
+
+          set -e
