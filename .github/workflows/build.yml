@@ -1,4 +1,4 @@
-name: Build Bretje P B.V. v6.5 GODOT THIRD PERSON - ANDROID EXPORT FIXED
+name: Build Bretje P B.V. v6.6 GODOT THIRD PERSON - ANDROID HOME FIXED
 
 on:
   workflow_dispatch:
@@ -111,11 +111,23 @@ jobs:
 
       - name: Export Android APK
         shell: bash
-        env:
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
         run: |
           set -euo pipefail
           cd game
+
+          # GitHub's Ubuntu Android image normally exports ANDROID_HOME in the shell.
+          # Recover it defensively if a workflow context ever leaves it empty.
+          if [ -z "${ANDROID_HOME:-}" ]; then
+            if [ -n "${ANDROID_SDK_ROOT:-}" ]; then
+              export ANDROID_HOME="$ANDROID_SDK_ROOT"
+            elif [ -d "/usr/local/lib/android/sdk" ]; then
+              export ANDROID_HOME="/usr/local/lib/android/sdk"
+            else
+              echo "ERROR: Android SDK path not found."
+              exit 1
+            fi
+          fi
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
 
           echo "=== Godot ==="
           ../godot --version
@@ -140,7 +152,7 @@ jobs:
 
           echo "=== Export Android debug APK ==="
           set +e
-          timeout 900s ../godot --headless --verbose --path . --export-debug "Android" "Bretje-P-BV-Dakwerk-Simulator-v6.5.apk" 2>&1 | tee ../godot-export.log
+          timeout 900s ../godot --headless --verbose --path . --export-debug "Android" "Bretje-P-BV-Dakwerk-Simulator-v6.6.apk" 2>&1 | tee ../godot-export.log
           GODOT_EXIT=${PIPESTATUS[0]}
           set -e
 
@@ -150,13 +162,13 @@ jobs:
             exit "$GODOT_EXIT"
           fi
 
-          test -s Bretje-P-BV-Dakwerk-Simulator-v6.5.apk
+          test -s Bretje-P-BV-Dakwerk-Simulator-v6.6.apk
           echo "=== APK CREATED SUCCESSFULLY ==="
-          ls -lh Bretje-P-BV-Dakwerk-Simulator-v6.5.apk
+          ls -lh Bretje-P-BV-Dakwerk-Simulator-v6.6.apk
 
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: Bretje-P-BV-v6.5-APK
-          path: game/Bretje-P-BV-Dakwerk-Simulator-v6.5.apk
+          name: Bretje-P-BV-v6.6-APK
+          path: game/Bretje-P-BV-Dakwerk-Simulator-v6.6.apk
           if-no-files-found: error
