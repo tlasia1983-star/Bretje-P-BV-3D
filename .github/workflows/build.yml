@@ -1,4 +1,4 @@
-name: Build Bretje P B.V. v6 GODOT THIRD PERSON
+name: Build Bretje P B.V. v6.1 GODOT THIRD PERSON
 
 on:
   workflow_dispatch:
@@ -45,11 +45,37 @@ jobs:
           unzip -q Godot_v4.4.1-stable_export_templates.tpz -d /tmp/godot_templates
           cp -r /tmp/godot_templates/templates/* "$HOME/.local/share/godot/export_templates/4.4.1.stable/"
 
-      - name: Import project
+      - name: Configure Godot Android environment
         shell: bash
         run: |
+          set -e
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "JAVA_HOME=$JAVA_HOME"
+          test -d "$ANDROID_HOME"
+          test -x "$ANDROID_HOME/platform-tools/adb"
+          mkdir -p "$HOME/.config/godot"
+          cat > "$HOME/.config/godot/editor_settings-4.4.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_HOME"
+          export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/debug_keystore = "$HOME/.android/debug.keystore"
+          EOF
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+          fi
+          "$ANDROID_HOME/platform-tools/adb" version || true
+          java -version
+
+      - name: Import and validate project
+        shell: bash
+        run: |
+          set -e
           cd game
-          ../godot --headless --editor --quit --path .
+          ../godot --headless --editor --path . --quit-after 5
+          ../godot --headless --path . --editor --quit
 
       - name: Export Android APK
         shell: bash
@@ -58,7 +84,7 @@ jobs:
         run: |
           set -e
           cd game
-          ../godot --headless --path . --export-debug Android Bretje-P-BV-Dakwerk-Simulator-v6.apk
+          ../godot --headless --verbose --path . --export-debug Android Bretje-P-BV-Dakwerk-Simulator-v6.apk
           test -f Bretje-P-BV-Dakwerk-Simulator-v6.apk
           ls -lh Bretje-P-BV-Dakwerk-Simulator-v6.apk
 
