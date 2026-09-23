@@ -1,0 +1,50 @@
+name: Apply Bretje P BV v7.10 repair visuals
+
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-v7.10.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Patch generated Godot source
+        shell: python
+        run: |
+          import re, base64, pathlib
+          p=pathlib.Path('.github/workflows/build.yml')
+          w=p.read_text()
+          m=re.search(r"echo '([A-Za-z0-9+/=]+)' \| base64 -d > game/Main\.gd",w)
+          if not m: raise SystemExit('Main.gd payload not found')
+          g=base64.b64decode(m.group(1)).decode()
+
+          # Repair patches must cover the complete old damaged area neatly and symmetrically.
+          g=g.replace('repair_patch=box(world,Vector3(-3,.10,1.47),Vector3(1.85,.065,1.15),Color("#303034"))',
+                      'repair_patch=box(world,Vector3(-3,.105,1.47),Vector3(2.15,.065,1.28),Color("#303034"))')
+          g=g.replace('repair_patch=box(world,Vector3(4.2,.09,2.41),Vector3(1.35,.055,1.82),Color("#303034"))',
+                      'repair_patch=box(world,Vector3(4.2,.105,2.41),Vector3(2.35,.065,1.18),Color("#303034"))')
+
+          # Drain repair: replace four square-looking blocks with a smooth circular annulus.
+          old='''drain_patch=Node3D.new(); world.add_child(drain_patch)\n\t\t\tbox(drain_patch,Vector3(5,.105,2.42),Vector3(1.75,.055,.52),Color("#2c2d30"))\n\t\t\tbox(drain_patch,Vector3(5,.105,3.58),Vector3(1.75,.055,.52),Color("#2c2d30"))\n\t\t\tbox(drain_patch,Vector3(4.42,.105,3),Vector3(.52,.055,.64),Color("#2c2d30"))\n\t\t\tbox(drain_patch,Vector3(5.58,.105,3),Vector3(.52,.055,.64),Color("#2c2d30"))'''
+          new='''drain_patch=Node3D.new(); world.add_child(drain_patch)\n\t\t\t# Nette ronde plakplaat uit segmenten; midden blijft volledig open.\n\t\t\tfor i in range(24):\n\t\t\t\tvar a=TAU*float(i)/24.0\n\t\t\t\tvar seg=box(drain_patch,Vector3(5+cos(a)*.62,.105,3+sin(a)*.62),Vector3(.34,.055,.24),Color("#2c2d30"))\n\t\t\t\tseg.rotation.y=-a'''
+          if old not in g: raise SystemExit('Drain patch block not found')
+          g=g.replace(old,new)
+
+          payload=base64.b64encode(g.encode()).decode()
+          w=w[:m.start(1)]+payload+w[m.end(1):]
+          w=w.replace('v7.9','v7.10').replace('V7.9','V7.10').replace('version/name="7.9"','version/name="7.10"')
+          p.write_text(w)
+      - name: Commit v7.10
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/build.yml
+          git commit -m "Bretje P BV v7.10: centered repair patch and round open drain" || exit 0
+          git push
